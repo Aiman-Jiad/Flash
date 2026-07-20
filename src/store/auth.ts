@@ -62,15 +62,19 @@ async function ensureProfile(userId: string, email: string) {
     .eq('id', userId)
     .maybeSingle()
   if (!data) {
-    const base = email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '_')
-    let username = base || 'user'
-    // ensure uniqueness
-    const { data: existing } = await supabase
-      .from('profiles')
-      .select('username')
-      .eq('username', username)
-      .maybeSingle()
-    if (existing) username = `${base}_${Math.random().toString(36).slice(2, 6)}`
+    const base = (email.split('@')[0] || 'user').replace(/[^a-zA-Z0-9_]/g, '_').replace(/^_+|_+$/g, '') || 'user'
+    let username = base
+    let attempt = 0
+    while (attempt < 5) {
+      const { data: existing } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('username', username)
+        .maybeSingle()
+      if (!existing) break
+      username = `${base}_${Math.random().toString(36).slice(2, 6)}`
+      attempt++
+    }
     await supabase.from('profiles').insert({
       id: userId,
       username,

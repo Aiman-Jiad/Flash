@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '@/lib/supabase'
 import { Spinner } from '@/components/Spinner'
@@ -6,6 +7,7 @@ import { Spinner } from '@/components/Spinner'
 type Mode = 'login' | 'signup' | 'reset'
 
 export function AuthScreen() {
+  const navigate = useNavigate()
   const [mode, setMode] = useState<Mode>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -25,13 +27,13 @@ export function AuthScreen() {
         if (error) throw error
         setInfo('Password reset link sent. Check your inbox.')
       } else if (mode === 'signup') {
+        const cleanUsername = (username || email.split('@')[0]).trim().replace(/[^a-zA-Z0-9_]/g, '_').replace(/^_+|_+$/g, '') || 'user'
         const { data, error } = await supabase.auth.signUp({ email, password })
         if (error) throw error
         if (data.user) {
-          // create profile
           await supabase.from('profiles').upsert({
             id: data.user.id,
-            username: username || email.split('@')[0],
+            username: cleanUsername,
             full_name: '',
             bio: '',
           })
@@ -41,6 +43,7 @@ export function AuthScreen() {
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) throw error
+        navigate('/', { replace: true })
       }
     } catch (err: any) {
       setError(err.message || 'Something went wrong')

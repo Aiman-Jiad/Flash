@@ -25,12 +25,20 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
+function AuthRoute({ children }: { children: React.ReactNode }) {
+  const session = useAuthStore((s) => s.session)
+  const loading = useAuthStore((s) => s.loading)
+  if (loading) return null
+  if (session) return <Navigate to="/" replace />
+  return <>{children}</>
+}
+
 function AnimatedRoutes() {
   const location = useLocation()
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-        <Route path="/login" element={<AuthScreen />} />
+        <Route path="/login" element={<AuthRoute><AuthScreen /></AuthRoute>} />
         <Route path="/" element={<ProtectedRoute><FeedScreen /></ProtectedRoute>} />
         <Route path="/explore" element={<ProtectedRoute><ExploreScreen /></ProtectedRoute>} />
         <Route path="/create" element={<ProtectedRoute><CreatePostScreen /></ProtectedRoute>} />
@@ -60,7 +68,7 @@ export default function App() {
     initAuth()
   }, [])
 
-  const isAuthRoute = window.location.pathname === '/login'
+  const isAuthRoute = window.location.pathname.startsWith('/login')
 
   return (
     <>
