@@ -80,3 +80,9 @@ export const LocationIcon = (p: P) => (
 export const VerifiedIcon = (p: P) => (
   <svg {...base({ ...p, fill: 'currentColor', stroke: 'none' })}><path d="M12 2l2.4 1.8 3-.3 1 2.8 2.7 1.4-.8 2.9.8 2.9-2.7 1.4-1 2.8-3-.3L12 22l-2.4-1.8-3 .3-1-2.8-2.7-1.4.8-2.9-.8-2.9 2.7-1.4 1-2.8 3 .3L12 2z" /><path d="M9 12l2 2 4-4" stroke="white" strokeWidth="2" /></svg>
 )
+export const MuteIcon = (p: P) => (
+  <svg {...base(p)}><path d="M11 5L6 9H2v6h4l5 4V5z" /><path d="M23 9l-6 6M17 9l6 6" /></svg>
+)
+export const VolumeIcon = (p: P) => (
+  <svg {...base(p)}><path d="M11 5L6 9H2v6h4l5 4V5z" /><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a9 9 0 0 1 0 14" /></svg>
+)

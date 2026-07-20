@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { getReelsPage, toggleReelLike, getReelComments, addReelComment, createReel, uploadFile } from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import { Avatar } from '@/components/Avatar'
-import { HeartIcon, HeartFilledIcon, CommentIcon, ShareIcon, CloseIcon, PlusIcon } from '@/components/icons'
+import { HeartIcon, HeartFilledIcon, CommentIcon, ShareIcon, CloseIcon, PlusIcon, MuteIcon, VolumeIcon } from '@/components/icons'
 import { timeAgo, formatCount, cn } from '@/lib/utils'
 import type { Reel } from '@/types'
 
@@ -112,18 +112,30 @@ function ReelItem({ reel, active, onLike, onOpenComments }: { reel: Reel; active
   const [liked, setLiked] = useState(!!reel.liked_by_me)
   const [likeCount, setLikeCount] = useState(reel.like_count)
   const [showHeart, setShowHeart] = useState(false)
+  const [muted, setMuted] = useState(true)
   const lastTap = useRef(0)
 
   useEffect(() => {
     const v = videoRef.current
     if (!v) return
+    v.muted = muted
     if (active) {
       v.play().catch(() => {})
     } else {
       v.pause()
       v.currentTime = 0
     }
-  }, [active])
+  }, [active, muted])
+
+  function toggleMute(e?: React.MouseEvent) {
+    e?.stopPropagation()
+    setMuted((m) => {
+      const next = !m
+      const v = videoRef.current
+      if (v) v.muted = next
+      return next
+    })
+  }
 
   function handleTap() {
     const now = Date.now()
@@ -138,6 +150,7 @@ function ReelItem({ reel, active, onLike, onOpenComments }: { reel: Reel; active
     } else {
       const v = videoRef.current
       if (v) { if (v.paused) v.play().catch(() => {}); else v.pause() }
+      if (muted) toggleMute()
     }
     lastTap.current = now
   }
@@ -148,7 +161,7 @@ function ReelItem({ reel, active, onLike, onOpenComments }: { reel: Reel; active
         ref={videoRef}
         src={reel.url}
         loop
-        muted
+        muted={muted}
         playsInline
         className="absolute inset-0 w-full h-full object-cover"
       />
@@ -171,6 +184,9 @@ function ReelItem({ reel, active, onLike, onOpenComments }: { reel: Reel; active
 
       {/* Right action rail */}
       <div className="absolute right-3 bottom-24 flex flex-col items-center gap-5 z-10">
+        <motion.button whileTap={{ scale: 0.8 }} onClick={toggleMute} className="flex flex-col items-center gap-1">
+          {muted ? <MuteIcon className="w-8 h-8 text-white" /> : <VolumeIcon className="w-8 h-8 text-white" />}
+        </motion.button>
         <motion.button whileTap={{ scale: 0.8 }} onClick={(e) => { e.stopPropagation(); setLiked(!liked); setLikeCount((c) => c + (liked ? -1 : 1)); onLike() }} className="flex flex-col items-center gap-1">
           {liked ? <HeartFilledIcon className="w-8 h-8 text-accent-500" /> : <HeartIcon className="w-8 h-8 text-white" />}
           <span className="text-white text-xs font-semibold">{formatCount(likeCount)}</span>
