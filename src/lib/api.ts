@@ -319,6 +319,17 @@ export async function reactToStory(storyId: string, userId: string, emoji: strin
   }
 }
 
+export async function sendStoryMessage(storyOwnerId: string, senderId: string, body: string) {
+  if (!body.trim()) return null
+  const conversationId = await getOrCreateConversation(senderId, storyOwnerId)
+  return sendMessage(conversationId, senderId, body.trim())
+}
+
+export async function getTopStoryEmojis(limit = 5) {
+  const { data } = await supabase.rpc('top_story_emojis', { p_limit: limit })
+  return (data || []) as { emoji: string; count: number }[]
+}
+
 // ---------- Reels ----------
 export async function getReelsPage(cursor?: string, limit = 6) {
   let q = supabase
