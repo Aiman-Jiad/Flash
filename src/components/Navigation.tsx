@@ -20,7 +20,6 @@ export function BottomNav() {
     { to: '/explore', icon: SearchIcon, label: 'Explore' },
     { to: '/create', icon: PlusIcon, label: 'Create', accent: true },
     { to: '/reels', icon: ReelIcon, label: 'Reels' },
-    { to: '/notifications', icon: HeartIcon, label: 'Activity' },
   ]
 
   return (
@@ -66,7 +65,6 @@ export function SideNav() {
     { to: '/create', icon: PlusIcon, label: 'Create' },
     { to: '/reels', icon: ReelIcon, label: 'Reels' },
     { to: '/messages', icon: HeartIcon, label: 'Messages' },
-    { to: '/notifications', icon: HeartIcon, label: 'Activity' },
     { to: `/u/${profile?.username}`, icon: Avatar, label: 'Profile', isAvatar: true },
   ]
 
@@ -103,10 +101,6 @@ export function SideNav() {
       </nav>
 
       <div className="flex flex-col gap-1">
-        <button onClick={toggleTheme} className="flex items-center gap-4 px-3 py-3 rounded-xl hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition">
-          {theme === 'dark' ? <SunIcon className="w-6 h-6" /> : <MoonIcon className="w-6 h-6" />}
-          <span>{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
-        </button>
         <button onClick={() => { signOut(); navigate('/login') }} className="flex items-center gap-4 px-3 py-3 rounded-xl hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition text-red-500">
           <LogoutIcon className="w-6 h-6" />
           <span>Log out</span>
@@ -120,7 +114,7 @@ export function TopBar({ title, right }: { title?: string; right?: React.ReactNo
   const theme = useUIStore((s) => s.theme)
   const toggleTheme = useUIStore((s) => s.toggleTheme)
   return (
-    <header className="md:hidden sticky top-0 z-30 glass-strong border-b border-neutral-200/60 dark:border-neutral-800/60">
+    <header className="sticky top-0 z-30 glass-strong border-b border-neutral-200/60 dark:border-neutral-800/60">
       <div className="flex items-center justify-between px-4 h-14">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent-400 to-accent-600 flex items-center justify-center">
@@ -132,6 +126,11 @@ export function TopBar({ title, right }: { title?: string; right?: React.ReactNo
         </div>
         <div className="flex items-center gap-2">
           {right}
+          <NavLink to="/notifications" className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-neutral-100 dark:hover:bg-neutral-900 transition" aria-label="Activity">
+            {({ isActive }) => (
+              <HeartIcon className={cn('w-5 h-5', isActive ? 'text-accent-500' : 'text-neutral-700 dark:text-neutral-300')} />
+            )}
+          </NavLink>
           <button onClick={toggleTheme} className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-neutral-100 dark:hover:bg-neutral-900 transition">
             {theme === 'dark' ? <SunIcon className="w-5 h-5" /> : <MoonIcon className="w-5 h-5" />}
           </button>
