@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { useAuthStore } from '@/store/auth'
 import type { Profile, Post, Comment, Story, Reel, Notification, Message, Conversation } from '@/types'
 
 // ---------- Profiles ----------
@@ -239,15 +240,27 @@ export async function toggleSave(postId: string, userId: string) {
 
 // ---------- Comments ----------
 export async function getComments(postId: string) {
+  const profile = useAuthStore.getState().profile
   const { data } = await supabase
     .from('comments')
     .select(`*, profile:profiles!comments_user_id_fkey(*)`)
     .eq('post_id', postId)
     .order('created_at', { ascending: true })
   const all = (data || []) as Comment[]
+  // fetch my likes on these comments
+  const ids = all.map((c) => c.id)
+  let likedSet = new Set<string>()
+  if (profile && ids.length) {
+    const { data: myLikes } = await supabase
+      .from('comment_likes')
+      .select('comment_id')
+      .eq('user_id', profile.id)
+      .in('comment_id', ids)
+    likedSet = new Set((myLikes || []).map((l: any) => l.comment_id))
+  }
   // build tree
   const byId = new Map<string, Comment>()
-  all.forEach((c) => byId.set(c.id, { ...c, replies: [] }))
+  all.forEach((c) => byId.set(c.id, { ...c, liked_by_me: likedSet.has(c.id), replies: [] }))
   const roots: Comment[] = []
   all.forEach((c) => {
     const node = byId.get(c.id)!
@@ -258,6 +271,21 @@ export async function getComments(postId: string) {
     }
   })
   return roots
+}
+
+export async function toggleCommentLike(commentId: string, userId: string) {
+  const { data } = await supabase
+    .from('comment_likes')
+    .select('id')
+    .eq('comment_id', commentId)
+    .eq('user_id', userId)
+    .maybeSingle()
+  if (data) {
+    await supabase.from('comment_likes').delete().eq('id', data.id)
+    return false
+  }
+  await supabase.from('comment_likes').insert({ comment_id: commentId, user_id: userId })
+  return true
 }
 
 export async function addComment(opts: { postId: string; userId: string; body: string; parentId?: string | null; postOwnerId: string }) {

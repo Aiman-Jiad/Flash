@@ -1,9 +1,9 @@
 import { useEffect, useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Avatar } from '@/components/Avatar'
-import { CloseIcon, HeartIcon, BackIcon } from '@/components/icons'
+import { CloseIcon, HeartIcon, HeartFilledIcon, BackIcon } from '@/components/icons'
 import { useAuthStore } from '@/store/auth'
-import { getComments, addComment, deleteComment } from '@/lib/api'
+import { getComments, addComment, deleteComment, toggleCommentLike } from '@/lib/api'
 import { timeAgo, cn } from '@/lib/utils'
 import type { Post, Comment } from '@/types'
 
@@ -50,6 +50,20 @@ export function CommentsModal({ post, onClose }: { post: Post; onClose: () => vo
   function removeComment(id: string) {
     deleteComment(id)
     setComments((prev) => prev.filter((c) => c.id !== id && c.id !== id).map((c) => ({ ...c, replies: (c.replies || []).filter((r) => r.id !== id) })))
+  }
+
+  async function likeComment(commentId: string) {
+    if (!profile) return
+    const liked = await toggleCommentLike(commentId, profile.id)
+    setComments((prev) => prev.map((c) => {
+      if (c.id === commentId) {
+        return { ...c, liked_by_me: liked, like_count: Math.max(0, (c.like_count || 0) + (liked ? 1 : -1)) }
+      }
+      const replies = (c.replies || []).map((r) => r.id === commentId
+        ? { ...r, liked_by_me: liked, like_count: Math.max(0, (r.like_count || 0) + (liked ? 1 : -1)) }
+        : r)
+      return { ...c, replies }
+    }))
   }
 
   return (
@@ -99,6 +113,10 @@ export function CommentsModal({ post, onClose }: { post: Post; onClose: () => vo
                   <div className="flex items-center gap-3 mt-1 text-xs text-neutral-400">
                     <span>{timeAgo(c.created_at)} ago</span>
                     <button onClick={() => setReplyTo(c)} className="hover:text-neutral-700 dark:hover:text-neutral-200">Reply</button>
+                    <button onClick={() => likeComment(c.id)} className="flex items-center gap-0.5 hover:text-neutral-700 dark:hover:text-neutral-200">
+                      {c.liked_by_me ? <HeartFilledIcon className="w-3 h-3 text-red-500" /> : <HeartIcon className="w-3 h-3" />}
+                      {c.like_count && c.like_count > 0 ? c.like_count : ''}
+                    </button>
                     {c.user_id === profile?.id && (
                       <button onClick={() => removeComment(c.id)} className="hover:text-red-500">Delete</button>
                     )}
@@ -115,6 +133,10 @@ export function CommentsModal({ post, onClose }: { post: Post; onClose: () => vo
                             </div>
                             <div className="flex items-center gap-3 mt-1 text-xs text-neutral-400">
                               <span>{timeAgo(r.created_at)} ago</span>
+                              <button onClick={() => likeComment(r.id)} className="flex items-center gap-0.5 hover:text-neutral-700 dark:hover:text-neutral-200">
+                                {r.liked_by_me ? <HeartFilledIcon className="w-3 h-3 text-red-500" /> : <HeartIcon className="w-3 h-3" />}
+                                {r.like_count && r.like_count > 0 ? r.like_count : ''}
+                              </button>
                               {r.user_id === profile?.id && (
                                 <button onClick={() => removeComment(r.id)} className="hover:text-red-500">Delete</button>
                               )}

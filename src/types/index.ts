@@ -39,6 +39,8 @@ export interface Comment {
   parent_id: string | null
   body: string
   created_at: string
+  like_count?: number
+  liked_by_me?: boolean
   profile?: Profile
   replies?: Comment[]
 }
