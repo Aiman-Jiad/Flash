@@ -17,6 +17,7 @@ export function ReelsScreen() {
   const [loading, setLoading] = useState(true)
   const [openComments, setOpenComments] = useState<Reel | null>(null)
   const [showCreate, setShowCreate] = useState(false)
+  const [muted, setMuted] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -90,7 +91,7 @@ export function ReelsScreen() {
       <div ref={containerRef} className="h-screen overflow-y-auto snap-y snap-mandatory no-scrollbar">
         {reels.map((reel, idx) => (
           <div key={reel.id} data-idx={idx} className="h-screen w-full snap-start snap-always relative flex items-center justify-center">
-            <ReelItem reel={reel} active={idx === activeIdx} onLike={() => onLike(reel)} onOpenComments={() => setOpenComments(reel)} />
+            <ReelItem reel={reel} active={idx === activeIdx} muted={muted} onToggleMute={() => setMuted((m) => !m)} onLike={() => onLike(reel)} onOpenComments={() => setOpenComments(reel)} />
           </div>
         ))}
       </div>
@@ -106,13 +107,12 @@ export function ReelsScreen() {
   )
 }
 
-function ReelItem({ reel, active, onLike, onOpenComments }: { reel: Reel; active: boolean; onLike: () => void; onOpenComments: () => void }) {
+function ReelItem({ reel, active, muted, onToggleMute, onLike, onOpenComments }: { reel: Reel; active: boolean; muted: boolean; onToggleMute: () => void; onLike: () => void; onOpenComments: () => void }) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const navigate = useNavigate()
   const [liked, setLiked] = useState(!!reel.liked_by_me)
   const [likeCount, setLikeCount] = useState(reel.like_count)
   const [showHeart, setShowHeart] = useState(false)
-  const [muted, setMuted] = useState(true)
   const lastTap = useRef(0)
 
   useEffect(() => {
@@ -129,12 +129,7 @@ function ReelItem({ reel, active, onLike, onOpenComments }: { reel: Reel; active
 
   function toggleMute(e?: React.MouseEvent) {
     e?.stopPropagation()
-    setMuted((m) => {
-      const next = !m
-      const v = videoRef.current
-      if (v) v.muted = next
-      return next
-    })
+    onToggleMute()
   }
 
   function handleTap() {
@@ -150,7 +145,6 @@ function ReelItem({ reel, active, onLike, onOpenComments }: { reel: Reel; active
     } else {
       const v = videoRef.current
       if (v) { if (v.paused) v.play().catch(() => {}); else v.pause() }
-      if (muted) toggleMute()
     }
     lastTap.current = now
   }
