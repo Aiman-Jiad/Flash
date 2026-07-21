@@ -86,3 +86,6 @@ export const MuteIcon = (p: P) => (
 export const VolumeIcon = (p: P) => (
   <svg {...base(p)}><path d="M11 5L6 9H2v6h4l5 4V5z" /><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a9 9 0 0 1 0 14" /></svg>
 )
+export const SmileIcon = (p: P) => (
+  <svg {...base(p)}><circle cx="12" cy="12" r="10" /><path d="M8 14s1.5 2 4 2 4-2 4-2" /><circle cx="9" cy="9" r="1" fill="currentColor" stroke="none" /><circle cx="15" cy="9" r="1" fill="currentColor" stroke="none" /></svg>
+)

@@ -6,9 +6,18 @@ import { useAuthStore } from '@/store/auth'
 import { getMessages, sendMessage, markMessagesSeen } from '@/lib/api'
 import { TopBar } from '@/components/Navigation'
 import { Avatar } from '@/components/Avatar'
-import { BackIcon } from '@/components/icons'
+import { BackIcon, SmileIcon } from '@/components/icons'
 import { timeAgo, cn } from '@/lib/utils'
 import type { Message, Profile } from '@/types'
+
+const EMOJIS = [
+  '😀','😁','😂','🤣','😊','😍','🥰','😘','😎','🤩','🥳','😇','🙂','🙃','😉','😌',
+  '🤔','🤨','😐','😑','😶','😏','😒','🙄','😬','😮‍💨','🤥','😴','🤤','😪','😵','🤯',
+  '🥺','😢','😭','😤','😠','😡','🤬','🤠','🤡','💀','👻','🤖','🥹','😬','🫠','🫡',
+  '👍','👎','👌','🤌','🤏','✌️','🤞','🤟','🤘','👏','🙌','🤝','🙏','💪','✊','👊',
+  '❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖',
+  '🔥','✨','⭐','🌟','💫','💥','💯','🎉','🎊','🎁','🎈','✅','❌','❓','❗','👀',
+]
 
 export function ConversationScreen() {
   const { conversationId } = useParams()
@@ -20,6 +29,7 @@ export function ConversationScreen() {
   const [loading, setLoading] = useState(true)
   const [otherTyping, setOtherTyping] = useState(false)
   const [otherOnline, setOtherOnline] = useState(false)
+  const [showEmoji, setShowEmoji] = useState(false)
   const listRef = useRef<HTMLDivElement>(null)
   const typingTimeout = useRef<number | null>(null)
 
@@ -140,16 +150,40 @@ export function ConversationScreen() {
         </div>
 
         {/* Composer */}
-        <div className="border-t border-neutral-200/60 dark:border-neutral-800/60 p-3 flex items-center gap-2 glass-strong">
-          <Avatar src={profile?.avatar_url} name={profile?.username} size={32} />
-          <input
-            value={body}
-            onChange={(e) => { setBody(e.target.value); onTyping() }}
-            onKeyDown={(e) => { if (e.key === 'Enter') send() }}
-            placeholder="Message…"
-            className="flex-1 px-4 py-2.5 rounded-full bg-neutral-100 dark:bg-neutral-900 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500/30"
-          />
-          <button onClick={send} disabled={!body.trim()} className="text-accent-500 font-semibold text-sm px-4 py-2 disabled:opacity-40">Send</button>
+        <div className="relative">
+          {showEmoji && (
+            <div className="absolute bottom-full left-0 right-0 mb-2 p-3 rounded-2xl glass-strong border border-neutral-200/60 dark:border-neutral-800/60 max-h-64 overflow-y-auto">
+              <div className="grid grid-cols-8 gap-1">
+                {EMOJIS.map((e) => (
+                  <button
+                    key={e}
+                    onClick={() => { setBody((b) => b + e); setShowEmoji(false) }}
+                    className="text-2xl p-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 active:scale-90 transition"
+                  >
+                    {e}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="border-t border-neutral-200/60 dark:border-neutral-800/60 p-3 flex items-center gap-2 glass-strong">
+            <Avatar src={profile?.avatar_url} name={profile?.username} size={32} />
+            <button
+              onClick={() => setShowEmoji((v) => !v)}
+              className={cn('p-2 rounded-full transition active:scale-90', showEmoji ? 'text-accent-500 bg-accent-500/10' : 'text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200')}
+              aria-label="Emoji"
+            >
+              <SmileIcon className="w-6 h-6" />
+            </button>
+            <input
+              value={body}
+              onChange={(e) => { setBody(e.target.value); onTyping() }}
+              onKeyDown={(e) => { if (e.key === 'Enter') send() }}
+              placeholder="Message…"
+              className="flex-1 px-4 py-2.5 rounded-full bg-neutral-100 dark:bg-neutral-900 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500/30"
+            />
+            <button onClick={send} disabled={!body.trim()} className="text-accent-500 font-semibold text-sm px-4 py-2 disabled:opacity-40">Send</button>
+          </div>
         </div>
       </div>
     </div>
