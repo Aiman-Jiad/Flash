@@ -113,10 +113,6 @@ export function CommentsModal({ post, onClose }: { post: Post; onClose: () => vo
                   <div className="flex items-center gap-3 mt-1 text-xs text-neutral-400">
                     <span>{timeAgo(c.created_at)} ago</span>
                     <button onClick={() => setReplyTo(c)} className="hover:text-neutral-700 dark:hover:text-neutral-200">Reply</button>
-                    <button onClick={() => likeComment(c.id)} className="flex items-center gap-0.5 hover:text-neutral-700 dark:hover:text-neutral-200">
-                      {c.liked_by_me ? <HeartFilledIcon className="w-3 h-3 text-red-500" /> : <HeartIcon className="w-3 h-3" />}
-                      {c.like_count && c.like_count > 0 ? c.like_count : ''}
-                    </button>
                     {c.user_id === profile?.id && (
                       <button onClick={() => removeComment(c.id)} className="hover:text-red-500">Delete</button>
                     )}
@@ -133,20 +129,40 @@ export function CommentsModal({ post, onClose }: { post: Post; onClose: () => vo
                             </div>
                             <div className="flex items-center gap-3 mt-1 text-xs text-neutral-400">
                               <span>{timeAgo(r.created_at)} ago</span>
-                              <button onClick={() => likeComment(r.id)} className="flex items-center gap-0.5 hover:text-neutral-700 dark:hover:text-neutral-200">
-                                {r.liked_by_me ? <HeartFilledIcon className="w-3 h-3 text-red-500" /> : <HeartIcon className="w-3 h-3" />}
-                                {r.like_count && r.like_count > 0 ? r.like_count : ''}
-                              </button>
                               {r.user_id === profile?.id && (
                                 <button onClick={() => removeComment(r.id)} className="hover:text-red-500">Delete</button>
                               )}
                             </div>
                           </div>
+                          <button
+                            onClick={() => likeComment(r.id)}
+                            className="shrink-0 p-1.5 self-start mt-0.5 active:scale-90 transition"
+                            aria-label={r.liked_by_me ? 'Unlike' : 'Like'}
+                          >
+                            {r.liked_by_me
+                              ? <HeartFilledIcon className="w-5 h-5 text-red-500" />
+                              : <HeartIcon className="w-5 h-5 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200" />}
+                            {r.like_count && r.like_count > 0 ? (
+                              <span className="block text-xs text-center mt-0.5 text-neutral-500">{r.like_count}</span>
+                            ) : null}
+                          </button>
                         </div>
                       ))}
                     </div>
                   )}
                 </div>
+                <button
+                  onClick={() => likeComment(c.id)}
+                  className="shrink-0 p-2 -mr-1 self-start mt-0.5 active:scale-90 transition"
+                  aria-label={c.liked_by_me ? 'Unlike' : 'Like'}
+                >
+                  {c.liked_by_me
+                    ? <HeartFilledIcon className="w-6 h-6 text-red-500" />
+                    : <HeartIcon className="w-6 h-6 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200" />}
+                  {c.like_count && c.like_count > 0 ? (
+                    <span className="block text-xs text-center mt-0.5 text-neutral-500">{c.like_count}</span>
+                  ) : null}
+                </button>
               </div>
             ))
           )}
