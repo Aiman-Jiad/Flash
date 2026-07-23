@@ -73,6 +73,7 @@ export interface Story {
   caption: string | null
   expires_at: string
   created_at: string
+  view_count?: number
   profile?: Profile
   viewed_by_me?: boolean
   views?: number

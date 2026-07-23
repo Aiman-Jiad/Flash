@@ -1,7 +1,9 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/store/auth'
-import { getFeedPage, getActiveStories, createStory, uploadFile } from '@/lib/api'
+import { getFeedPage, getActiveStories } from '@/lib/api'
 import { PostCard } from '@/components/PostCard'
 import { CommentsModal } from '@/components/CommentsModal'
 import { StoryBar } from '@/components/StoryBar'
@@ -9,11 +11,11 @@ import { StoryViewer } from '@/components/StoryViewer'
 import { PostCardSkeleton, StoryBarSkeleton } from '@/components/Skeleton'
 import { TopBar } from '@/components/Navigation'
 import { CameraIcon } from '@/components/icons'
-import { Avatar } from '@/components/Avatar'
 import type { Post, Story } from '@/types'
 
 export function FeedScreen() {
   const profile = useAuthStore((s) => s.profile)
+  const navigate = useNavigate()
   const [posts, setPosts] = useState<Post[]>([])
   const [cursor, setCursor] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -38,12 +40,31 @@ export function FeedScreen() {
     setRefreshing(false)
   }, [profile, cursor])
 
+  const refreshStories = useCallback(() => {
+    getActiveStories().then(setStories)
+  }, [])
+
   useEffect(() => {
     if (profile) {
       load(true)
-      getActiveStories().then(setStories)
+      refreshStories()
     }
   }, [profile])
+
+  // Realtime: new stories appear live, expired ones vanish
+  useEffect(() => {
+    if (!profile) return
+    const channel = supabase
+      .channel('stories-realtime')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'stories' }, () => refreshStories())
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'stories' }, () => refreshStories())
+      .subscribe()
+
+    // Poll every 30s to expire stories whose 24h window has passed
+    const interval = window.setInterval(refreshStories, 30000)
+
+    return () => { supabase.removeChannel(channel); clearInterval(interval) }
+  }, [profile, refreshStories])
 
   // Infinite scroll
   useEffect(() => {
@@ -76,20 +97,10 @@ export function FeedScreen() {
     if (pullY > 60) {
       setRefreshing(true)
       await load(true)
-      getActiveStories().then(setStories)
+      refreshStories()
     }
     setPullY(0)
     startY.current = null
-  }
-
-  async function onAddStory(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file || !profile) return
-    const { url } = await uploadFile('stories', file, profile.id)
-    if (url) {
-      await createStory({ userId: profile.id, url })
-      getActiveStories().then(setStories)
-    }
   }
 
   return (
@@ -111,7 +122,7 @@ export function FeedScreen() {
 
         {/* Story bar */}
         {loading ? <StoryBarSkeleton /> : (
-          <StoryBar stories={stories} myAvatar={profile?.avatar_url} myUsername={profile?.username} onAddStory={onAddStory} onOpen={(i) => setStoryViewerIndex(i)} />
+          <StoryBar stories={stories} myAvatar={profile?.avatar_url} myUsername={profile?.username} onAddStory={() => navigate('/stories/new')} onOpen={(i) => setStoryViewerIndex(i)} />
         )}
 
         {/* Feed */}
@@ -134,6 +145,7 @@ export function FeedScreen() {
           stories={stories}
           startIndex={storyViewerIndex}
           onClose={() => setStoryViewerIndex(null)}
+          onStoriesChange={refreshStories}
         />
       )}
     </div>

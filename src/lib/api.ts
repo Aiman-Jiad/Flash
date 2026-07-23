@@ -330,6 +330,20 @@ export async function createStory(opts: { userId: string; url: string; caption?:
   return { data: data as Story | null, error }
 }
 
+export async function deleteStory(storyId: string) {
+  const { error } = await supabase.from('stories').delete().eq('id', storyId)
+  return { error }
+}
+
+export async function getStoryViewers(storyId: string) {
+  const { data } = await supabase
+    .from('story_views')
+    .select(`profile:profiles!story_views_user_id_fkey(id, username, full_name, avatar_url)`)
+    .eq('story_id', storyId)
+    .order('created_at', { ascending: false })
+  return (data || []).map((v: any) => v.profile) as Pick<Profile, 'id' | 'username' | 'full_name' | 'avatar_url'>[]
+}
+
 export async function markStoryViewed(storyId: string, userId: string) {
   await supabase.from('story_views').upsert({ story_id: storyId, user_id: userId }, { onConflict: 'story_id,user_id' })
 }

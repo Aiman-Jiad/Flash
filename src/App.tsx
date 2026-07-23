@@ -16,6 +16,7 @@ import { EditProfileScreen } from '@/screens/EditProfileScreen'
 import { MessagesScreen } from '@/screens/MessagesScreen'
 import { ConversationScreen } from '@/screens/ConversationScreen'
 import { PostDetailScreen } from '@/screens/PostDetailScreen'
+import { CreateStoryScreen } from '@/screens/CreateStoryScreen'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const session = useAuthStore((s) => s.session)
@@ -42,6 +43,7 @@ function AnimatedRoutes() {
         <Route path="/" element={<ProtectedRoute><FeedScreen /></ProtectedRoute>} />
         <Route path="/explore" element={<ProtectedRoute><ExploreScreen /></ProtectedRoute>} />
         <Route path="/create" element={<ProtectedRoute><CreatePostScreen /></ProtectedRoute>} />
+        <Route path="/stories/new" element={<ProtectedRoute><CreateStoryScreen /></ProtectedRoute>} />
         <Route path="/reels" element={<ProtectedRoute><ReelsScreen /></ProtectedRoute>} />
         <Route path="/notifications" element={<ProtectedRoute><NotificationsScreen /></ProtectedRoute>} />
         <Route path="/messages" element={<ProtectedRoute><MessagesScreen /></ProtectedRoute>} />
