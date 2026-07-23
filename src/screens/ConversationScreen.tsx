@@ -104,10 +104,15 @@ export function ConversationScreen() {
 
   return (
     <div className="md:pl-64 pb-20 md:pb-0 min-h-screen flex flex-col h-screen">
-      <TopBar title={other?.username || 'Chat'} right={
-        <Avatar src={other?.avatar_url} name={other?.username} size={32} onClick={() => other && navigate(`/u/${other.username}`)} />
-      } />
-      <div className="flex-1 flex flex-col max-w-xl mx-auto w-full">
+      <TopBar
+        title={other?.username || 'Chat'}
+        onBack={() => navigate('/messages')}
+        hideActions
+        right={
+          <Avatar src={other?.avatar_url} name={other?.username} size={32} onClick={() => other && navigate(`/u/${other.username}`)} />
+        }
+      />
+      <div className="flex-1 flex flex-col max-w-xl mx-auto w-full min-h-0 overflow-y-auto">
         {/* Status bar */}
         <div className="px-4 py-2 text-xs text-neutral-500 flex items-center gap-2 border-b border-neutral-200/60 dark:border-neutral-800/60">
           {otherOnline ? (

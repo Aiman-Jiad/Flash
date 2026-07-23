@@ -94,22 +94,24 @@ export function MessagesScreen() {
                   key={p.id}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="flex items-center gap-3 p-3 rounded-2xl bg-neutral-50 dark:bg-neutral-900/50"
+                  className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 rounded-2xl bg-neutral-50 dark:bg-neutral-900/50"
                 >
-                  <button onClick={() => navigate(`/u/${p.username}`)} className="shrink-0">
-                    <Avatar src={p.avatar_url} name={p.username} size={48} ring="story" />
-                  </button>
-                  <button onClick={() => navigate(`/u/${p.username}`)} className="min-w-0 flex-1 text-left">
-                    <div className="font-semibold text-sm truncate">{p.username}</div>
-                    <div className="text-xs text-neutral-500 truncate">{p.full_name || 'Flash user'}</div>
-                  </button>
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <button onClick={() => navigate(`/u/${p.username}`)} className="shrink-0">
+                      <Avatar src={p.avatar_url} name={p.username} size={44} ring="story" />
+                    </button>
+                    <button onClick={() => navigate(`/u/${p.username}`)} className="min-w-0 flex-1 text-left">
+                      <div className="font-semibold text-sm truncate">{p.username}</div>
+                      <div className="text-xs text-neutral-500 truncate">{p.full_name || 'Flash user'}</div>
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0 sm:justify-end">
                     {!following && (
                       <motion.button
                         whileTap={{ scale: 0.94 }}
                         disabled={isBusy}
                         onClick={() => onFollow(p)}
-                        className="px-4 py-2 rounded-full bg-gradient-to-br from-accent-400 to-accent-600 text-white text-xs font-bold shadow-md shadow-accent-500/25 hover:shadow-accent-500/40 hover:brightness-110 transition disabled:opacity-50"
+                        className="flex-1 sm:flex-none px-4 py-2 rounded-full bg-gradient-to-br from-accent-400 to-accent-600 text-white text-xs font-bold shadow-md shadow-accent-500/25 hover:shadow-accent-500/40 hover:brightness-110 transition disabled:opacity-50"
                       >
                         Follow
                       </motion.button>
@@ -119,7 +121,7 @@ export function MessagesScreen() {
                       disabled={isBusy}
                       onClick={() => startChat(p)}
                       className={cn(
-                        'flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition disabled:opacity-50',
+                        'flex items-center justify-center gap-1.5 flex-1 sm:flex-none px-4 py-2 rounded-full text-xs font-bold transition disabled:opacity-50',
                         following
                           ? 'bg-neutral-200 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 hover:bg-neutral-300 dark:hover:bg-neutral-700'
                           : 'bg-accent-500/10 text-accent-600 dark:text-accent-400 hover:bg-accent-500/20',
