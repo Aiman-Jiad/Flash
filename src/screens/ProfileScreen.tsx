@@ -5,9 +5,10 @@ import { useAuthStore } from '@/store/auth'
 import { getProfileByUsername, getFollowStats, isFollowing, toggleFollow, getUserPosts, getSavedPosts } from '@/lib/api'
 import { TopBar } from '@/components/Navigation'
 import { Avatar } from '@/components/Avatar'
-import { SettingsIcon, BackIcon, BookmarkIcon, MoreIcon } from '@/components/icons'
+import { SettingsIcon, BackIcon, BookmarkIcon, MoreIcon, MoonIcon, SunIcon } from '@/components/icons'
 import { ProfileSkeleton } from '@/components/Skeleton'
 import { formatCount, cn } from '@/lib/utils'
+import { useUIStore } from '@/store/ui'
 import type { Profile, Post } from '@/types'
 
 export function ProfileScreen({ saved = false }: { saved?: boolean }) {
@@ -20,6 +21,8 @@ export function ProfileScreen({ saved = false }: { saved?: boolean }) {
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<'posts' | 'saved'>(saved ? 'saved' : 'posts')
+  const theme = useUIStore((s) => s.theme)
+  const toggleTheme = useUIStore((s) => s.toggleTheme)
 
   const isOwn = profile?.username === username
 
@@ -82,9 +85,13 @@ export function ProfileScreen({ saved = false }: { saved?: boolean }) {
                 <div className="flex flex-wrap items-center gap-3 mb-4">
                   <h1 className="font-display text-xl font-bold">{user.username}</h1>
                   {isOwn ? (
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
                       <Link to="/accounts/edit" className="px-4 py-1.5 rounded-lg bg-neutral-100 dark:bg-neutral-900 text-sm font-semibold hover:bg-neutral-200 dark:hover:bg-neutral-800 transition">Edit profile</Link>
                       <button onClick={() => useAuthStore.getState().signOut().then(() => navigate('/login'))} className="px-4 py-1.5 rounded-lg bg-neutral-100 dark:bg-neutral-900 text-sm font-semibold hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950/30 transition">Log out</button>
+                      <button onClick={toggleTheme} className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-neutral-100 dark:bg-neutral-900 text-sm font-semibold hover:bg-neutral-200 dark:hover:bg-neutral-800 transition active:scale-95">
+                        {theme === 'dark' ? <SunIcon className="w-4 h-4" /> : <MoonIcon className="w-4 h-4" />}
+                        {theme === 'dark' ? 'Light' : 'Dark'}
+                      </button>
                     </div>
                   ) : (
                     <div className="flex gap-2">

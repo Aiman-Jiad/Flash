@@ -4,7 +4,7 @@ import { useUIStore } from '@/store/ui'
 import { useAuthStore } from '@/store/auth'
 import { Avatar } from '@/components/Avatar'
 import {
-  HomeIcon, SearchIcon, PlusIcon, ReelIcon, HeartIcon, MoonIcon, SunIcon, LogoutIcon,
+  HomeIcon, SearchIcon, PlusIcon, ReelIcon, HeartIcon, ChatIcon, LogoutIcon,
 } from '@/components/icons'
 import { cn } from '@/lib/utils'
 
@@ -131,9 +131,15 @@ export function TopBar({ title, right }: { title?: string; right?: React.ReactNo
               <HeartIcon className={cn('w-5 h-5', isActive ? 'text-accent-500' : 'text-neutral-700 dark:text-neutral-300')} />
             )}
           </NavLink>
-          <button onClick={toggleTheme} className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-neutral-100 dark:hover:bg-neutral-900 transition">
-            {theme === 'dark' ? <SunIcon className="w-5 h-5" /> : <MoonIcon className="w-5 h-5" />}
-          </button>
+          <NavLink to="/messages" className={({ isActive }) => cn(
+            'flex items-center gap-2 h-10 px-4 rounded-full transition active:scale-95',
+            isActive
+              ? 'bg-gradient-to-br from-accent-400 to-accent-600 text-white shadow-lg shadow-accent-500/30'
+              : 'bg-gradient-to-br from-accent-400 to-accent-600 text-white shadow-lg shadow-accent-500/30 hover:shadow-accent-500/50 hover:brightness-110',
+          )}>
+            <ChatIcon className="w-5 h-5" />
+            <span className="font-semibold text-sm hidden sm:inline">Messages</span>
+          </NavLink>
         </div>
       </div>
     </header>
