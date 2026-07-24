@@ -157,7 +157,7 @@ function ReelItem({ reel, active, muted, onToggleMute, onLike, onOpenComments }:
         loop
         muted={muted}
         playsInline
-        className="absolute inset-0 w-full h-full object-cover"
+        className="absolute inset-0 w-full h-full object-contain bg-black"
       />
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/30 pointer-events-none" />
 

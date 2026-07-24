@@ -97,8 +97,8 @@ export function PostCard({ post, onOpenComments }: { post: Post; onOpenComments?
       <div className="relative bg-neutral-100 dark:bg-neutral-950 select-none" onClick={handleTap}>
         <div className="flex overflow-x-auto snap-x snap-mandatory no-scrollbar" style={{ scrollSnapType: 'x mandatory' }}>
           {images.length > 0 ? images.map((img) => (
-            <div key={img.id} className="w-full flex-shrink-0 snap-center aspect-square relative">
-              <img src={img.url} alt="" className="w-full h-full object-cover" loading="lazy" />
+            <div key={img.id} className="w-full flex-shrink-0 snap-center max-h-[600px] relative bg-neutral-100 dark:bg-neutral-950 flex items-center justify-center">
+              <img src={img.url} alt="" className="w-full h-auto max-h-[600px] object-contain" loading="lazy" />
             </div>
           )) : (
             <div className="w-full aspect-square flex items-center justify-center text-neutral-400">No image</div>
