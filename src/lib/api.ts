@@ -574,30 +574,15 @@ export async function markAllNotificationsRead(userId: string) {
 }
 
 // ---------- DMs ----------
+// Creates (or finds) a 1:1 conversation via a SECURITY DEFINER RPC. Doing this
+// client-side is impossible under RLS: the conversations table has no INSERT
+// policy, and conversation_members INSERT only allows your own row — so adding
+// the other participant would be blocked. The RPC runs server-side and inserts
+// both memberships atomically.
 export async function getOrCreateConversation(userA: string, userB: string) {
-  // find existing conversation with both members
-  const { data: myConvs } = await supabase
-    .from('conversation_members')
-    .select('conversation_id')
-    .eq('user_id', userA)
-  const convIds = (myConvs || []).map((m) => m.conversation_id)
-  if (convIds.length) {
-    const { data: shared } = await supabase
-      .from('conversation_members')
-      .select('conversation_id')
-      .eq('user_id', userB)
-      .in('conversation_id', convIds)
-      .maybeSingle()
-    if (shared) return shared.conversation_id as string
-  }
-  // create new
-  const { data: conv } = await supabase.from('conversations').insert({}).select('*').maybeSingle()
-  if (!conv) throw new Error('failed to create conversation')
-  await supabase.from('conversation_members').insert([
-    { conversation_id: conv.id, user_id: userA },
-    { conversation_id: conv.id, user_id: userB },
-  ])
-  return conv.id as string
+  const { data, error } = await supabase.rpc('create_dm', { p_other: userB })
+  if (error) throw error
+  return data as string
 }
 
 export async function getConversations(userId: string) {
