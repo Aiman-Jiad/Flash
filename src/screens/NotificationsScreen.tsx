@@ -53,7 +53,7 @@ export function NotificationsScreen() {
     if (n.type === 'follow' || n.type === 'unfollow') {
       navigate(`/u/${n.actor?.username}`)
     } else if (n.type === 'message') {
-      navigate('/messages')
+      navigate(n.entity_id ? `/messages/${n.entity_id}` : '/messages')
     } else if (n.entity_id) {
       navigate(`/p/${n.entity_id}`)
     }

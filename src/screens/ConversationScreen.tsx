@@ -57,7 +57,10 @@ export function ConversationScreen() {
       .channel(`conv-${conversationId}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` }, (payload) => {
         const m = payload.new as Message
-        setMessages((prev) => prev.some((x) => x.id === m.id) ? prev : [...prev, m])
+        setMessages((prev) => {
+          if (prev.some((x) => x.id === m.id)) return prev
+          return [...prev.filter((x) => !(x.id.startsWith('temp-') && x.sender_id === m.sender_id && x.body === m.body)), m]
+        })
         if (m.sender_id !== profile.id) {
           markMessagesSeen(conversationId!, profile.id)
           setOtherTyping(false)
@@ -77,8 +80,8 @@ export function ConversationScreen() {
       })
       .on('presence', { event: 'sync' }, () => {
         const state = channel.presenceState()
-        const ids = Object.keys(state)
-        setOtherOnline(ids.some((id) => id !== profile.id))
+        const all = Object.values(state).flat() as Array<Record<string, any>>
+        setOtherOnline(all.some((p) => p.user_id && p.user_id !== profile.id))
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
@@ -92,8 +95,17 @@ export function ConversationScreen() {
   async function send() {
     if (!profile || !conversationId || !body.trim()) return
     const text = body.trim()
+    const tempId = `temp-${Date.now()}`
+    setMessages((prev) => [...prev, { id: tempId, conversation_id: conversationId, sender_id: profile.id, body: text, seen: false, created_at: new Date().toISOString() } as Message])
     setBody('')
-    await sendMessage(conversationId, profile.id, text)
+    const res = await sendMessage(conversationId, profile.id, text)
+    if (res.error || !res.data) {
+      setMessages((prev) => prev.filter((m) => m.id !== tempId))
+      setBody(text)
+      return
+    }
+    setMessages((prev) => prev.map((m) => (m.id === tempId ? res.data! : m)))
+    setTimeout(() => listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' }), 50)
   }
 
   function onTyping() {

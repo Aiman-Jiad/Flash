@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useAuthStore } from '@/store/auth'
+import { supabase } from '@/lib/supabase'
 import { getConversations, searchProfiles, getOrCreateConversation, isFollowing, toggleFollow } from '@/lib/api'
 import { TopBar } from '@/components/Navigation'
 import { Avatar } from '@/components/Avatar'
@@ -21,7 +22,13 @@ export function MessagesScreen() {
 
   useEffect(() => {
     if (!profile) return
-    getConversations(profile.id).then((c) => { setConvs(c); setLoading(false) })
+    const load = () => getConversations(profile.id).then((c) => { setConvs(c); setLoading(false) })
+    load()
+    const channel = supabase
+      .channel('messages-list')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${profile.id}` }, () => load())
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
   }, [profile?.id])
 
   useEffect(() => {
