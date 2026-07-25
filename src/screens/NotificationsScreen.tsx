@@ -14,6 +14,7 @@ const TYPE_LABEL: Record<Notification['type'], string> = {
   like: 'liked your post',
   comment: 'commented on your post',
   follow: 'started following you',
+  unfollow: 'unfollowed you',
   reel_like: 'liked your reel',
   comment_reply: 'replied to your comment',
   story_reaction: 'reacted to your story',
@@ -49,7 +50,7 @@ export function NotificationsScreen() {
   }, [profile?.id])
 
   function open(n: Notification) {
-    if (n.type === 'follow') {
+    if (n.type === 'follow' || n.type === 'unfollow') {
       navigate(`/u/${n.actor?.username}`)
     } else if (n.type === 'message') {
       navigate('/messages')

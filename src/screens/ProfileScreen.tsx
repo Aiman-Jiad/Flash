@@ -103,8 +103,12 @@ export function ProfileScreen({ saved = false }: { saved?: boolean }) {
                 </div>
                 <div className="flex gap-6 mb-4">
                   <div><span className="font-semibold">{posts.length}</span> <span className="text-neutral-500 text-sm">posts</span></div>
-                  <div><span className="font-semibold">{formatCount(stats.followers)}</span> <span className="text-neutral-500 text-sm">followers</span></div>
-                  <div><span className="font-semibold">{formatCount(stats.following)}</span> <span className="text-neutral-500 text-sm">following</span></div>
+                  <button onClick={() => navigate(`/u/${user.username}/followers`)} className="hover:opacity-70 transition">
+                    <span className="font-semibold">{formatCount(stats.followers)}</span> <span className="text-neutral-500 text-sm">followers</span>
+                  </button>
+                  <button onClick={() => navigate(`/u/${user.username}/following`)} className="hover:opacity-70 transition">
+                    <span className="font-semibold">{formatCount(stats.following)}</span> <span className="text-neutral-500 text-sm">following</span>
+                  </button>
                 </div>
                 <div className="text-sm">
                   {user.full_name && <div className="font-semibold">{user.full_name}</div>}

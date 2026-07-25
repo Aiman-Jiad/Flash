@@ -12,6 +12,7 @@ import { CreatePostScreen } from '@/screens/CreatePostScreen'
 import { ReelsScreen } from '@/screens/ReelsScreen'
 import { NotificationsScreen } from '@/screens/NotificationsScreen'
 import { ProfileScreen } from '@/screens/ProfileScreen'
+import { ConnectionsScreen } from '@/screens/ConnectionsScreen'
 import { EditProfileScreen } from '@/screens/EditProfileScreen'
 import { MessagesScreen } from '@/screens/MessagesScreen'
 import { ConversationScreen } from '@/screens/ConversationScreen'
@@ -49,6 +50,8 @@ function AnimatedRoutes() {
         <Route path="/messages" element={<ProtectedRoute><MessagesScreen /></ProtectedRoute>} />
         <Route path="/messages/:conversationId" element={<ProtectedRoute><ConversationScreen /></ProtectedRoute>} />
         <Route path="/u/:username" element={<ProtectedRoute><ProfileScreen /></ProtectedRoute>} />
+        <Route path="/u/:username/followers" element={<ProtectedRoute><ConnectionsScreen /></ProtectedRoute>} />
+        <Route path="/u/:username/following" element={<ProtectedRoute><ConnectionsScreen /></ProtectedRoute>} />
         <Route path="/u/:username/saved" element={<ProtectedRoute><ProfileScreen saved /></ProtectedRoute>} />
         <Route path="/accounts/edit" element={<ProtectedRoute><EditProfileScreen /></ProtectedRoute>} />
         <Route path="/p/:postId" element={<ProtectedRoute><PostDetailScreen /></ProtectedRoute>} />

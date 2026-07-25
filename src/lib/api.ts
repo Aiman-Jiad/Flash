@@ -61,6 +61,15 @@ export async function toggleFollow(followerId: string, followeeId: string) {
   const existing = await isFollowing(followerId, followeeId)
   if (existing) {
     await supabase.from('follows').delete().eq('follower_id', followerId).eq('followee_id', followeeId)
+    // Notify the unfollowed user (don't notify if unfollowing yourself, which
+    // the CHECK constraint already prevents)
+    if (followerId !== followeeId) {
+      await supabase.from('notifications').insert({
+        user_id: followeeId,
+        actor_id: followerId,
+        type: 'unfollow',
+      })
+    }
     return false
   }
   await supabase.from('follows').insert({ follower_id: followerId, followee_id: followeeId })
@@ -70,6 +79,66 @@ export async function toggleFollow(followerId: string, followeeId: string) {
     type: 'follow',
   })
   return true
+}
+
+// Is `viewerId` allowed to see `targetUserId`'s followers/following lists?
+// Public accounts: anyone authenticated. Private accounts: only approved
+// followers (i.e. someone the target follows back is NOT enough — the viewer
+// must actually be in the target's followers list).
+export async function canViewConnections(viewerId: string, targetUserId: string) {
+  if (viewerId === targetUserId) return true
+  const { data: target } = await supabase
+    .from('profiles')
+    .select('is_private')
+    .eq('id', targetUserId)
+    .maybeSingle()
+  if (!target?.is_private) return true
+  const { data } = await supabase
+    .from('follows')
+    .select('id')
+    .eq('follower_id', viewerId)
+    .eq('followee_id', targetUserId)
+    .maybeSingle()
+  return !!data
+}
+
+// Followers of a user (people who follow them), with profile join + whether
+// the current viewer follows each one back.
+export async function getFollowers(userId: string, viewerId: string) {
+  const { data } = await supabase
+    .from('follows')
+    .select(`profile:profiles!follows_follower_id_fkey(id, username, full_name, avatar_url, is_private)`)
+    .eq('followee_id', userId)
+    .order('created_at', { ascending: false })
+  const profiles = (data || []).map((f: any) => f.profile).filter(Boolean) as Profile[]
+  if (!profiles.length) return [] as Array<Profile & { followed_by_me: boolean }>
+  const ids = profiles.map((p) => p.id)
+  const { data: mine } = await supabase
+    .from('follows')
+    .select('followee_id')
+    .eq('follower_id', viewerId)
+    .in('followee_id', ids)
+  const mineSet = new Set((mine || []).map((m: any) => m.followee_id))
+  return profiles.map((p) => ({ ...p, followed_by_me: mineSet.has(p.id) }))
+}
+
+// Following of a user (people they follow).
+export async function getFollowing(userId: string, viewerId: string) {
+  const { data } = await supabase
+    .from('follows')
+    .select(`profile:profiles!follows_followee_id_fkey(id, username, full_name, avatar_url, is_private)`)
+    .eq('follower_id', userId)
+    .order('created_at', { ascending: false })
+  const profiles = (data || []).map((f: any) => f.profile).filter(Boolean) as Profile[]
+  if (!profiles.length) return [] as Array<Profile & { followed_by_me: boolean }>
+  const ids = profiles.map((p) => p.id)
+  const { data: mine } = await supabase
+    .from('follows')
+    .select('followee_id')
+    .eq('follower_id', viewerId)
+    .in('followee_id', ids)
+  const mineSet = new Set((mine || []).map((m: any) => m.followee_id))
+  return profiles.map((p) => ({ ...p, followed_by_me: mineSet.has(p.id) }))
 }
 
 // ---------- Posts ----------

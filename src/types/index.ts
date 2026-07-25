@@ -121,7 +121,7 @@ export interface Notification {
   id: string
   user_id: string
   actor_id: string
-  type: 'like' | 'comment' | 'follow' | 'reel_like' | 'comment_reply' | 'story_reaction' | 'message'
+  type: 'like' | 'comment' | 'follow' | 'reel_like' | 'comment_reply' | 'story_reaction' | 'message' | 'unfollow'
   entity_id: string | null
   body: string | null
   read: boolean
