@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { getReelsPage, toggleReelLike, getReelComments, addReelComment, createReel, uploadFile } from '@/lib/api'
+import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/store/auth'
 import { Avatar } from '@/components/Avatar'
 import { HeartIcon, HeartFilledIcon, CommentIcon, ShareIcon, CloseIcon, PlusIcon, MuteIcon, VolumeIcon } from '@/components/icons'
@@ -126,6 +127,17 @@ function ReelItem({ reel, active, muted, onToggleMute, onLike, onOpenComments }:
       v.currentTime = 0
     }
   }, [active, muted])
+
+  // Realtime: keep like count in sync when anyone likes/unlikes this reel
+  useEffect(() => {
+    const channel = supabase
+      .channel(`reel-likes-${reel.id}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'reels', filter: `id=eq.${reel.id}` }, (payload) => {
+        if (typeof payload.new?.like_count === 'number') setLikeCount(payload.new.like_count)
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [reel.id])
 
   function toggleMute(e?: React.MouseEvent) {
     e?.stopPropagation()

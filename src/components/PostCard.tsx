@@ -5,6 +5,7 @@ import { Avatar } from '@/components/Avatar'
 import { HeartIcon, HeartFilledIcon, CommentIcon, ShareIcon, BookmarkIcon, BookmarkFilledIcon, MoreIcon, LocationIcon } from '@/components/icons'
 import { useAuthStore } from '@/store/auth'
 import { toggleLike, toggleSave } from '@/lib/api'
+import { supabase } from '@/lib/supabase'
 import { timeAgo, formatCount, renderCaption, cn } from '@/lib/utils'
 import type { Post } from '@/types'
 
@@ -23,6 +24,17 @@ export function PostCard({ post, onOpenComments }: { post: Post; onOpenComments?
     setLikeCount(post.like_count || 0)
     setSaved(!!post.saved_by_me)
   }, [post.id, post.liked_by_me, post.like_count, post.saved_by_me])
+
+  // Realtime: keep like count in sync when anyone likes/unlikes this post
+  useEffect(() => {
+    const channel = supabase
+      .channel(`post-likes-${post.id}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'posts', filter: `id=eq.${post.id}` }, (payload) => {
+        if (typeof payload.new?.like_count === 'number') setLikeCount(payload.new.like_count)
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [post.id])
 
   const images = post.images || []
   const owner = post.profile
@@ -149,9 +161,9 @@ export function PostCard({ post, onOpenComments }: { post: Post; onOpenComments?
 
       {/* Likes + caption */}
       <div className="px-4 pt-2 space-y-1">
-        {likeCount > 0 && (
-          <div className="text-sm font-semibold">{formatCount(likeCount)} like{likeCount !== 1 ? 's' : ''}</div>
-        )}
+        <div className="text-sm font-semibold">
+          {likeCount > 0 ? `${formatCount(likeCount)} like${likeCount !== 1 ? 's' : ''}` : 'Be the first to like'}
+        </div>
         {post.caption && (
           <div className="text-sm leading-relaxed">
             <button onClick={() => navigate(`/u/${owner?.username}`)} className="font-semibold mr-1.5">{owner?.username}</button>
