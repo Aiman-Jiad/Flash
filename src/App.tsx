@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAuthStore } from '@/store/auth'
 import { useUIStore } from '@/store/ui'
@@ -73,12 +73,15 @@ export default function App() {
     initAuth()
   }, [])
 
-  const isAuthRoute = window.location.pathname.startsWith('/login')
+  const isAuthRoute = window.location.hash.includes('/login') || window.location.pathname.endsWith('/login')
 
   return (
     <>
       {showSplash && <Splash onDone={() => setShowSplash(false)} />}
-      <BrowserRouter>
+      {/* HashRouter so deep links and refreshes work on GitHub Pages (a
+          static host with no server-side rewrite). BrowserRouter would 404
+          on any path other than the root. */}
+      <HashRouter>
         <div className="min-h-screen">
           <AnimatedRoutes />
           {!isAuthRoute && session && !loading && (
@@ -88,7 +91,7 @@ export default function App() {
             </>
           )}
         </div>
-      </BrowserRouter>
+      </HashRouter>
     </>
   )
 }
