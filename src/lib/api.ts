@@ -417,31 +417,76 @@ export async function toggleReelLike(reelId: string, userId: string, reelOwnerId
 }
 
 export async function getReelComments(reelId: string) {
+  const profile = useAuthStore.getState().profile
   const { data } = await supabase
     .from('comments_reels')
     .select(`*, profile:profiles!comments_reels_user_id_fkey(*)`)
     .eq('reel_id', reelId)
     .order('created_at', { ascending: true })
-  return (data || []) as any[]
+  const all = (data || []) as Comment[]
+  const ids = all.map((c) => c.id)
+  let likedSet = new Set<string>()
+  if (profile && ids.length) {
+    const { data: myLikes } = await supabase
+      .from('comment_reel_likes')
+      .select('comment_id')
+      .eq('user_id', profile.id)
+      .in('comment_id', ids)
+    likedSet = new Set((myLikes || []).map((l: any) => l.comment_id))
+  }
+  const byId = new Map<string, Comment>()
+  all.forEach((c) => byId.set(c.id, { ...c, liked_by_me: likedSet.has(c.id), replies: [] }))
+  const roots: Comment[] = []
+  all.forEach((c) => {
+    const node = byId.get(c.id)!
+    if (c.parent_id && byId.has(c.parent_id)) {
+      byId.get(c.parent_id)!.replies!.push(node)
+    } else {
+      roots.push(node)
+    }
+  })
+  return roots
 }
 
-export async function addReelComment(opts: { reelId: string; userId: string; body: string; reelOwnerId: string }) {
+export async function toggleReelCommentLike(commentId: string, userId: string) {
+  const { data } = await supabase
+    .from('comment_reel_likes')
+    .select('id')
+    .eq('comment_id', commentId)
+    .eq('user_id', userId)
+    .maybeSingle()
+  if (data) {
+    await supabase.from('comment_reel_likes').delete().eq('id', data.id)
+    return false
+  }
+  await supabase.from('comment_reel_likes').insert({ comment_id: commentId, user_id: userId })
+  return true
+}
+
+export async function addReelComment(opts: { reelId: string; userId: string; body: string; parentId?: string | null; reelOwnerId: string; parentOwnerId?: string | null }) {
   const { data, error } = await supabase
     .from('comments_reels')
-    .insert({ reel_id: opts.reelId, user_id: opts.userId, body: opts.body })
+    .insert({ reel_id: opts.reelId, user_id: opts.userId, body: opts.body, parent_id: opts.parentId ?? null })
     .select(`*, profile:profiles!comments_reels_user_id_fkey(*)`)
     .maybeSingle()
   if (error || !data) return null
-  if (opts.reelOwnerId !== opts.userId) {
+  // Notify the reel owner on a top-level comment; notify the parent comment
+  // owner on a reply (mirrors the post comment flow).
+  const notifyUserId = opts.parentId ? opts.parentOwnerId : opts.reelOwnerId
+  if (notifyUserId && notifyUserId !== opts.userId) {
     await supabase.from('notifications').insert({
-      user_id: opts.reelOwnerId,
+      user_id: notifyUserId,
       actor_id: opts.userId,
-      type: 'comment',
+      type: opts.parentId ? 'comment_reply' : 'comment',
       entity_id: opts.reelId,
       body: opts.body.slice(0, 120),
     })
   }
-  return data
+  return data as Comment
+}
+
+export async function deleteReelComment(commentId: string) {
+  await supabase.from('comments_reels').delete().eq('id', commentId)
 }
 
 // ---------- Notifications ----------

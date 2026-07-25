@@ -1,13 +1,13 @@
 import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { getReelsPage, toggleReelLike, getReelComments, addReelComment, createReel, uploadFile } from '@/lib/api'
+import { getReelsPage, toggleReelLike, getReelComments, addReelComment, deleteReelComment, toggleReelCommentLike, createReel, uploadFile } from '@/lib/api'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/store/auth'
 import { Avatar } from '@/components/Avatar'
-import { HeartIcon, HeartFilledIcon, CommentIcon, ShareIcon, CloseIcon, PlusIcon, MuteIcon, VolumeIcon } from '@/components/icons'
+import { HeartIcon, HeartFilledIcon, CommentIcon, ShareIcon, CloseIcon, PlusIcon, MuteIcon, VolumeIcon, BackIcon } from '@/components/icons'
 import { timeAgo, formatCount, cn } from '@/lib/utils'
-import type { Reel } from '@/types'
+import type { Reel, Comment } from '@/types'
 
 export function ReelsScreen() {
   const profile = useAuthStore((s) => s.profile)
@@ -226,18 +226,76 @@ function ReelItem({ reel, active, muted, onToggleMute, onLike, onOpenComments }:
 
 function ReelCommentsModal({ reel, onClose }: { reel: Reel; onClose: () => void }) {
   const profile = useAuthStore((s) => s.profile)
-  const [comments, setComments] = useState<any[]>([])
+  const [comments, setComments] = useState<Comment[]>([])
   const [loading, setLoading] = useState(true)
   const [body, setBody] = useState('')
+  const [replyTo, setReplyTo] = useState<Comment | null>(null)
+  const [sending, setSending] = useState(false)
+  const listRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    getReelComments(reel.id).then((c) => { setComments(c); setLoading(false) })
+    let alive = true
+    getReelComments(reel.id).then((c) => { if (alive) { setComments(c); setLoading(false) } })
+    return () => { alive = false }
+  }, [reel.id])
+
+  // Live sync: when anyone adds/deletes a reel comment, reload the thread
+  useEffect(() => {
+    const channel = supabase
+      .channel(`reel-comments-${reel.id}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'comments_reels', filter: `reel_id=eq.${reel.id}` }, () => {
+        getReelComments(reel.id).then(setComments)
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'comments_reels', filter: `reel_id=eq.${reel.id}` }, () => {
+        getReelComments(reel.id).then(setComments)
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
   }, [reel.id])
 
   async function submit() {
-    if (!profile || !body.trim()) return
-    const c = await addReelComment({ reelId: reel.id, userId: profile.id, body: body.trim(), reelOwnerId: reel.user_id })
-    if (c) { setComments((prev) => [...prev, c]); setBody('') }
+    if (!profile || !body.trim() || sending) return
+    setSending(true)
+    const c = await addReelComment({
+      reelId: reel.id,
+      userId: profile.id,
+      body: body.trim(),
+      parentId: replyTo?.id,
+      reelOwnerId: reel.user_id,
+      parentOwnerId: replyTo?.user_id,
+    })
+    setSending(false)
+    if (c) {
+      if (replyTo) {
+        setComments((prev) => prev.map((p) => p.id === replyTo.id ? { ...p, replies: [...(p.replies || []), c] } : p))
+      } else {
+        setComments((prev) => [...prev, c])
+      }
+      setBody('')
+      setReplyTo(null)
+      setTimeout(() => listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' }), 50)
+    }
+  }
+
+  function removeComment(id: string) {
+    deleteReelComment(id)
+    setComments((prev) => prev
+      .filter((c) => c.id !== id)
+      .map((c) => ({ ...c, replies: (c.replies || []).filter((r) => r.id !== id) })))
+  }
+
+  async function likeComment(commentId: string) {
+    if (!profile) return
+    const liked = await toggleReelCommentLike(commentId, profile.id)
+    setComments((prev) => prev.map((c) => {
+      if (c.id === commentId) {
+        return { ...c, liked_by_me: liked, like_count: Math.max(0, (c.like_count || 0) + (liked ? 1 : -1)) }
+      }
+      const replies = (c.replies || []).map((r) => r.id === commentId
+        ? { ...r, liked_by_me: liked, like_count: Math.max(0, (r.like_count || 0) + (liked ? 1 : -1)) }
+        : r)
+      return { ...c, replies }
+    }))
   }
 
   return (
@@ -257,34 +315,108 @@ function ReelCommentsModal({ reel, onClose }: { reel: Reel; onClose: () => void 
         className="glass-strong w-full sm:max-w-md sm:rounded-3xl rounded-t-3xl h-[70vh] flex flex-col border border-white/20 shadow-2xl"
       >
         <div className="flex items-center justify-between px-4 h-14 border-b border-neutral-200/60 dark:border-neutral-800/60">
-          <div className="w-8" />
+          {replyTo ? (
+            <button onClick={() => setReplyTo(null)} className="flex items-center gap-1 text-sm text-neutral-500">
+              <BackIcon className="w-5 h-5" /> Back
+            </button>
+          ) : (
+            <div className="w-8" />
+          )}
           <div className="font-semibold">Comments</div>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-900"><CloseIcon className="w-5 h-5" /></button>
         </div>
-        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
-          {loading ? <div className="text-center text-sm text-neutral-400 py-8">Loading…</div> :
-            comments.length === 0 ? <div className="text-center text-sm text-neutral-400 py-12">No comments yet.</div> :
+
+        <div ref={listRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
+          {loading ? (
+            <div className="text-center text-sm text-neutral-400 py-8">Loading comments…</div>
+          ) : comments.length === 0 ? (
+            <div className="text-center text-sm text-neutral-400 py-12">No comments yet. Start the conversation.</div>
+          ) : (
             comments.map((c) => (
               <div key={c.id} className="flex gap-3">
                 <Avatar src={c.profile?.avatar_url} name={c.profile?.username} size={32} />
-                <div>
-                  <div className="text-sm"><span className="font-semibold mr-1.5">{c.profile?.username}</span>{c.body}</div>
-                  <div className="text-xs text-neutral-400 mt-0.5">{timeAgo(c.created_at)} ago</div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm">
+                    <span className="font-semibold mr-1.5">{c.profile?.username}</span>
+                    {c.body}
+                  </div>
+                  <div className="flex items-center gap-3 mt-1 text-xs text-neutral-400">
+                    <span>{timeAgo(c.created_at)} ago</span>
+                    <button onClick={() => setReplyTo(c)} className="hover:text-neutral-700 dark:hover:text-neutral-200">Reply</button>
+                    {c.user_id === profile?.id && (
+                      <button onClick={() => removeComment(c.id)} className="hover:text-red-500">Delete</button>
+                    )}
+                  </div>
+                  {c.replies && c.replies.length > 0 && (
+                    <div className="mt-3 space-y-3 pl-2 border-l border-neutral-200 dark:border-neutral-800">
+                      {c.replies.map((r) => (
+                        <div key={r.id} className="flex gap-2">
+                          <Avatar src={r.profile?.avatar_url} name={r.profile?.username} size={26} />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm">
+                              <span className="font-semibold mr-1.5">{r.profile?.username}</span>
+                              {r.body}
+                            </div>
+                            <div className="flex items-center gap-3 mt-1 text-xs text-neutral-400">
+                              <span>{timeAgo(r.created_at)} ago</span>
+                              {r.user_id === profile?.id && (
+                                <button onClick={() => removeComment(r.id)} className="hover:text-red-500">Delete</button>
+                              )}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => likeComment(r.id)}
+                            className="shrink-0 p-1.5 self-start mt-0.5 active:scale-90 transition"
+                            aria-label={r.liked_by_me ? 'Unlike' : 'Like'}
+                          >
+                            {r.liked_by_me
+                              ? <HeartFilledIcon className="w-5 h-5 text-red-500" />
+                              : <HeartIcon className="w-5 h-5 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200" />}
+                            <span className="block text-xs text-center mt-0.5 text-neutral-500">{r.like_count || 0}</span>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
+                <button
+                  onClick={() => likeComment(c.id)}
+                  className="shrink-0 p-2 -mr-1 self-start mt-0.5 active:scale-90 transition"
+                  aria-label={c.liked_by_me ? 'Unlike' : 'Like'}
+                >
+                  {c.liked_by_me
+                    ? <HeartFilledIcon className="w-6 h-6 text-red-500" />
+                    : <HeartIcon className="w-6 h-6 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200" />}
+                  <span className="block text-xs text-center mt-0.5 text-neutral-500">{c.like_count || 0}</span>
+                </button>
               </div>
             ))
-          }
+          )}
         </div>
-        <div className="border-t border-neutral-200/60 dark:border-neutral-800/60 p-3 flex items-center gap-2">
-          <Avatar src={profile?.avatar_url} name={profile?.username} size={32} />
-          <input
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') submit() }}
-            placeholder="Add a comment…"
-            className="flex-1 px-3 py-2 rounded-full bg-neutral-100 dark:bg-neutral-900 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500/30"
-          />
-          <button onClick={submit} disabled={!body.trim()} className="text-accent-500 font-semibold text-sm px-3 disabled:opacity-40">Post</button>
+
+        <div className="border-t border-neutral-200/60 dark:border-neutral-800/60 p-3">
+          {replyTo && (
+            <div className="text-xs text-neutral-500 mb-2 px-2">
+              Replying to <span className="font-semibold">{replyTo.profile?.username}</span>
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            <Avatar src={profile?.avatar_url} name={profile?.username} size={32} />
+            <input
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') submit() }}
+              placeholder="Add a comment…"
+              className="flex-1 px-3 py-2 rounded-full bg-neutral-100 dark:bg-neutral-900 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500/30"
+            />
+            <button
+              onClick={submit}
+              disabled={!body.trim() || sending}
+              className="text-accent-500 font-semibold text-sm px-3 py-2 disabled:opacity-40"
+            >
+              Post
+            </button>
+          </div>
         </div>
       </motion.div>
     </motion.div>
